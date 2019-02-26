@@ -1,28 +1,16 @@
 #!/usr/bin/nodejs
 
 /*
-        MIT License
+Copyright (c) 2018, University of North Carolina at Charlotte All rights reserved.
 
-        Copyright (c) 2018 Reza Baharani
-        website: rbaharani.com
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
-        Permission is hereby granted, free of charge, to any person obtaining a copy
-        of this software and associated documentation files (the "Software"), to deal
-        in the Software without restriction, including without limitation the rights
-        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-        copies of the Software, and to permit persons to whom the Software is
-        furnished to do so, subject to the following conditions:
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-        The above copyright notice and this permission notice shall be included in all
-        copies or substantial portions of the Software.
-
-        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-        SOFTWARE.
+Authors: Reza Baharani - Transformative Computer Systems Architecture Research (TeCSAR) at UNC Charlotte
 */
 
 
@@ -32,57 +20,75 @@ var ArgumentParser = require('argparse').ArgumentParser;
 var capturing = false;
 
 var parser = new ArgumentParser({
-  version: '0.0.1',
-  addHelp:true,
-  description: 'Javascript code for capturing power consumption.'
+        version: '0.1.0',
+        addHelp: true,
+        description: 'Javascript code for capturing power consumption.'
 });
 
 parser.addArgument(
-  [ '-i', '--intervalTime' ],
-  {
-    help: 'Interval time to capture power consumption.',
-    constant: true,
-    type: 'int',
-    argumentDefault: 38,
-    required: true
-  }
+        ['-i', '--intervalTime'],
+        {
+                help: 'Interval time to capture power consumption.',
+                constant: true,
+                type: 'int',
+                argumentDefault: 38,
+                required: true
+        }
 );
 
 parser.addArgument(
-  [ '-p', '--port' ],
-  {
-    help: 'TCP scoket number.',
-    constant: true,
-    type: 'int',
-    argumentDefault: 8080,
-    required: true
-  }
+        ['-p', '--port'],
+        {
+                help: 'TCP scoket number.',
+                constant: true,
+                type: 'int',
+                argumentDefault: 8080,
+                required: true
+        }
+);
+
+parser.addArgument(
+        ['-b', '--bord'],
+        {
+                help: 'Board model. There are two options, namely "xavier" or "tx2".',
+                constant: true,
+                type: 'string',
+                argumentDefault: 'xavier',
+                required: true
+        }
 );
 
 var args = parser.parseArgs();
 
-const GPU_POWER_FILE_NAME = "/sys/devices/3160000.i2c/i2c-0/0-0040/iio_device/in_power0_input";
-const DDR_POWER_FILE_NAME = "/sys/devices/3160000.i2c/i2c-0/0-0041/iio_device/in_power2_input";
+if (args.bord == 'tx2') {
+        const GPU_POWER_FILE_NAME = "/sys/devices/3160000.i2c/i2c-0/0-0040/iio_device/in_power0_input";
+        const DDR_POWER_FILE_NAME = "/sys/devices/3160000.i2c/i2c-0/0-0041/iio_device/in_power2_input";
+} else if (args.bord == 'xavier') {
+        const GPU_POWER_FILE_NAME = "/sys/bus/i2c/drivers/ina3221x/1-0040/iio_device/in_power0_input";
+        const DDR_POWER_FILE_NAME = "/sys/bus/i2c/drivers/ina3221x/1-0041/iio_device/in_power1_input";
+} else {
+        process.exit(1);
+}
 
 var POWER_DDR = 0;
 var POWER_GPU = 0;
 var COUNTER_GPU = 0;
 var COUNTER_DDR = 0;
 
-var server = net.createServer(function(socket) {
+var server = net.createServer(function (socket) {
 
         socket.on('data', function (data) {
-        
-                if(capturing){
+
+                if (capturing) {
                         if ('STOP\n' == data.toString('utf8')) {
                                 capturing = false;
                                 clearTimeout(timer);
                                 console.log('Stoped capturing...')
                                 reportPower()
-                        }                
-                }else{
-                        if ('START\n' == data.toString('utf8')){
-                        
+                        }
+                } else {
+                        if ('START\n' == data.toString('utf8')) {
+
                                 POWER_DDR = 0;
                                 POWER_GPU = 0;
                                 COUNTER_GPU = 0;
@@ -90,23 +96,23 @@ var server = net.createServer(function(socket) {
 
                                 console.log('Capturing...')
                                 timer = setInterval(readFileAndCalPower, args.intervalTime);
-                                
+
                                 capturing = true;
                         }
                 }
         });
 
-        socket.on('close',function(error){
+        socket.on('close', function (error) {
                 console.log('Socket closed!');
-                if(error){
+                if (error) {
                         console.log('Socket was due to transmission error. Err:' + error);
                 }
                 capturing = false;
-                
-       });
+
+        });
 });
 
-server.on('listening',function(){
+server.on('listening', function () {
         console.log("Listening to 127.0.0.1:" + args.port);
 });
 
@@ -114,27 +120,26 @@ server.listen(args.port, '127.0.0.1');
 
 function readFileAndCalPower() {
 
-        fs.readFile(GPU_POWER_FILE_NAME, 'utf8', function(err, contents) {
-            currentPower = parseInt(contents);
-            POWER_GPU +=  currentPower;
-            COUNTER_GPU++;
-            //console.log('\t--> currentPower: ' + currentPower + 'COUNTER_GPU: ' + COUNTER_GPU)
+        fs.readFile(GPU_POWER_FILE_NAME, 'utf8', function (err, contents) {
+                currentPower = parseInt(contents);
+                POWER_GPU += currentPower;
+                COUNTER_GPU++;
+                //console.log('\t--> currentPower: ' + currentPower + 'COUNTER_GPU: ' + COUNTER_GPU)
         });
 
-        fs.readFile(DDR_POWER_FILE_NAME, 'utf8', function(err, contents) {
-            currentPower = parseInt(contents);
-            POWER_DDR +=  currentPower;
-            COUNTER_DDR++;
+        fs.readFile(DDR_POWER_FILE_NAME, 'utf8', function (err, contents) {
+                currentPower = parseInt(contents);
+                POWER_DDR += currentPower;
+                COUNTER_DDR++;
         });
-
 }
 
-function reportPower(){
-        avgPowerGPU = POWER_GPU / (COUNTER_GPU*1000);
-        avgPowerDDR = POWER_DDR / (COUNTER_DDR*1000);
+function reportPower() {
+        avgPowerGPU = POWER_GPU / (COUNTER_GPU * 1000);
+        avgPowerDDR = POWER_DDR / (COUNTER_DDR * 1000);
         totalPower = avgPowerGPU + avgPowerDDR;
         console.log('---------------------------------');
-        console.log('GPU Power: ' + avgPowerGPU +'W');
-        console.log('DDR Power: ' + avgPowerDDR + 'W');   
-        console.log('Total power: ' + totalPower + 'W');   
+        console.log('GPU Power: ' + avgPowerGPU + 'W');
+        console.log('DDR Power: ' + avgPowerDDR + 'W');
+        console.log('Total power: ' + totalPower + 'W');
 }
