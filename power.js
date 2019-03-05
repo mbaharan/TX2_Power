@@ -60,12 +60,15 @@ parser.addArgument(
 
 var args = parser.parseArgs();
 
+GPU_POWER_FILE_NAME = '';
+DDR_POWER_FILE_NAME = '';
+
 if (args.bord == 'tx2') {
-        const GPU_POWER_FILE_NAME = "/sys/devices/3160000.i2c/i2c-0/0-0040/iio_device/in_power0_input";
-        const DDR_POWER_FILE_NAME = "/sys/devices/3160000.i2c/i2c-0/0-0041/iio_device/in_power2_input";
+        GPU_POWER_FILE_NAME = "/sys/devices/3160000.i2c/i2c-0/0-0040/iio_device/in_power0_input";
+        DDR_POWER_FILE_NAME = "/sys/devices/3160000.i2c/i2c-0/0-0041/iio_device/in_power2_input";
 } else if (args.bord == 'xavier') {
-        const GPU_POWER_FILE_NAME = "/sys/bus/i2c/drivers/ina3221x/1-0040/iio_device/in_power0_input";
-        const DDR_POWER_FILE_NAME = "/sys/bus/i2c/drivers/ina3221x/1-0041/iio_device/in_power1_input";
+        GPU_POWER_FILE_NAME = "/sys/bus/i2c/drivers/ina3221x/1-0040/iio_device/in_power0_input";
+        DDR_POWER_FILE_NAME = "/sys/bus/i2c/drivers/ina3221x/1-0041/iio_device/in_power1_input";
 } else {
         process.exit(1);
 }
