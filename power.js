@@ -184,7 +184,14 @@ function reportPower() {
         avgPowerGPU = (POWER_GPU / (COUNTER_GPU * 1000)) - POWER_GPU_BEFOR_START_FINAL;
         avgPowerDDR = POWER_DDR / (COUNTER_DDR * 1000);
         avgPowerSoC = (POWER_SOC / (COUNTER_SOC * 1000)) - POWER_SOC_BEFOR_START_FINAL;
-        totalPower = avgPowerGPU + avgPowerDDR + avgPowerSoC;
+        if (avgPowerGPU >= 0){
+                totalPower = avgPowerGPU + avgPowerDDR + avgPowerSoC;
+        } else {
+                console.log("WARNING: GPU power was nagative. Total power is the summation of DDR power and SoC power.")
+                console.log("If you are using DLA core and your using 16bit precision, you may ignore this warning.")
+                totalPower = avgPowerDDR + avgPowerSoC;
+        }
+        
         console.log('---------------------------------');
         console.log('GPU Power: ' + avgPowerGPU + 'W');
         console.log('DDR Power: ' + avgPowerDDR + 'W');
