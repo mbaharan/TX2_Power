@@ -85,6 +85,8 @@ var COUNTER_GPU = 0;
 var COUNTER_DDR = 0;
 var COUNTER_SOC = 0;
 
+var 
+
 var server = net.createServer(function (socket) {
 
         socket.on('data', function (data) {
@@ -107,7 +109,7 @@ var server = net.createServer(function (socket) {
                                 console.log('Capturing...')
                                 timer = setInterval(readFileAndCalPower, args.intervalTime);
                                 clearTimeout(timer_soc_before_start);
-                                POWER_SOC_BEFOR_START = POWER_SOC_BEFOR_START / (COUNTER_SOC_BEFOR_START * 1000);
+                                POWER_SOC_BEFOR_START_FINAL = POWER_SOC_BEFOR_START / (COUNTER_SOC_BEFOR_START * 1000);
                                 console.log("SoC Power Consumption Before Starting:" + POWER_SOC_BEFOR_START + "W")
 
                                 capturing = true;
@@ -168,7 +170,7 @@ function readFileAndCalPower() {
 function reportPower() {
         avgPowerGPU = POWER_GPU / (COUNTER_GPU * 1000);
         avgPowerDDR = POWER_DDR / (COUNTER_DDR * 1000);
-        avgPowerSoC = (POWER_SOC / (COUNTER_SOC * 1000)) - POWER_SOC_BEFOR_START;
+        avgPowerSoC = (POWER_SOC / (COUNTER_SOC * 1000)) - POWER_SOC_BEFOR_START_FINAL;
         totalPower = avgPowerGPU + avgPowerDDR + avgPowerSoC;
         console.log('---------------------------------');
         console.log('GPU Power: ' + avgPowerGPU + 'W');
