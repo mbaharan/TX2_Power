@@ -109,7 +109,7 @@ var server = net.createServer(function (socket) {
                                 timer = setInterval(readFileAndCalPower, args.intervalTime);
                                 clearTimeout(timer_soc_before_start);
                                 POWER_SOC_BEFOR_START_FINAL = POWER_SOC_BEFOR_START / (COUNTER_SOC_BEFOR_START * 1000);
-                                console.log("SoC Power Consumption Before Starting:" + POWER_SOC_BEFOR_START + "W")
+                                console.log("SoC Power Consumption Before Starting:" + POWER_SOC_BEFOR_START_FINAL + "W")
 
                                 capturing = true;
                         }
