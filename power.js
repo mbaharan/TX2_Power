@@ -81,6 +81,10 @@ var POWER_SOC = 0;
 var POWER_SOC_BEFOR_START = 0;
 var COUNTER_SOC_BEFOR_START = 0;
 
+var POWER_GPU_BEFOR_START = 0;
+var COUNTER_GPU_BEFOR_START = 0;
+
+
 var COUNTER_GPU = 0;
 var COUNTER_DDR = 0;
 var COUNTER_SOC = 0;
@@ -109,7 +113,9 @@ var server = net.createServer(function (socket) {
                                 timer = setInterval(readFileAndCalPower, args.intervalTime);
                                 clearTimeout(timer_soc_before_start);
                                 POWER_SOC_BEFOR_START_FINAL = POWER_SOC_BEFOR_START / (COUNTER_SOC_BEFOR_START * 1000);
+                                POWER_GPU_BEFOR_START_FINAL = POWER_GPU_BEFOR_START / (COUNTER_GPU_BEFOR_START * 1000);
                                 console.log("SoC Power Consumption Before Starting:" + POWER_SOC_BEFOR_START_FINAL + "W")
+                                console.log("GPU Power Consumption Before Starting:" + POWER_GPU_BEFOR_START_FINAL + "W")
 
                                 capturing = true;
                         }
@@ -133,15 +139,23 @@ server.on('listening', function () {
 server.listen(args.port, '127.0.0.1');
 
 
-timer_soc_before_start = setInterval(readSoCPowerBeforStart, args.intervalTime);
+timer_soc_before_start = setInterval(readSoC_GPU_PowerBeforStart, args.intervalTime);
 
-function readSoCPowerBeforStart(){
+function readSoC_GPU_PowerBeforStart(){
         fs.readFile(SoC_POWER_FILE_NAME, 'utf8', function (err, contents) {
                 currentPower = parseInt(contents);
                 POWER_SOC_BEFOR_START += currentPower;
                 COUNTER_SOC_BEFOR_START++;
                 //console.log('\t--> currentPower: ' + currentPower + 'COUNTER_GPU: ' + COUNTER_GPU)
         });
+
+        fs.readFile(GPU_POWER_FILE_NAME, 'utf8', function (err, contents) {
+                currentPower = parseInt(contents);
+                POWER_GPU_BEFOR_START += currentPower;
+                COUNTER_GPU_BEFOR_START++;
+                //console.log('\t--> currentPower: ' + currentPower + 'COUNTER_GPU: ' + COUNTER_GPU)
+        });
+
 }
 
 function readFileAndCalPower() {
@@ -167,7 +181,7 @@ function readFileAndCalPower() {
 }
 
 function reportPower() {
-        avgPowerGPU = POWER_GPU / (COUNTER_GPU * 1000);
+        avgPowerGPU = (POWER_GPU / (COUNTER_GPU * 1000)) - POWER_GPU_BEFOR_START_FINAL;
         avgPowerDDR = POWER_DDR / (COUNTER_DDR * 1000);
         avgPowerSoC = (POWER_SOC / (COUNTER_SOC * 1000)) - POWER_SOC_BEFOR_START_FINAL;
         totalPower = avgPowerGPU + avgPowerDDR + avgPowerSoC;
