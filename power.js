@@ -84,8 +84,7 @@ var COUNTER_SOC_BEFOR_START = 0;
 var COUNTER_GPU = 0;
 var COUNTER_DDR = 0;
 var COUNTER_SOC = 0;
-
-var 
+ 
 
 var server = net.createServer(function (socket) {
 
