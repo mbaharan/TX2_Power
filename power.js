@@ -189,7 +189,7 @@ function readFileAndCalPower() {
         });
 
         if (args.bord == 'xavier') {
-                var contents = fs.readFile(SoC_POWER_FILE_NAME, 'utf8', function (err, contents) {
+                fs.readFile(SoC_POWER_FILE_NAME, 'utf8', function (err, contents) {
                         currentPower = parseInt(contents);
                         lock.acquire(SOC_KEY, function (done) {
                                 POWER_SOC += currentPower;
