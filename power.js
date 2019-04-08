@@ -173,7 +173,9 @@ function readFileAndCalPower() {
                 lock.acquire(GPU_KEY, function (done) {
                         POWER_GPU += currentPower;
                         COUNTER_GPU++;
-                });
+                }, function (err, ret) {
+                        console.log("GPU release")
+                }, {});
         });
 
         fs.readFileSync(DDR_POWER_FILE_NAME, 'utf8', function (err, contents) {
@@ -181,7 +183,9 @@ function readFileAndCalPower() {
                 lock.acquire(DDR_KEY, function (done) {
                         POWER_DDR += currentPower;
                         COUNTER_DDR++;
-                });
+                }, function (err, ret) {
+                        console.log("DDR release")
+                }, {});
         });
 
         if (args.bord == 'xavier') {
@@ -191,7 +195,9 @@ function readFileAndCalPower() {
                                 POWER_SOC += currentPower;
                                 COUNTER_SOC++;
                         });
-                });
+                }, function (err, ret) {
+                        console.log("SoC release")
+                }, {});
         }
 }
 
