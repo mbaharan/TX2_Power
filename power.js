@@ -178,7 +178,7 @@ function readFileAndCalPower() {
                 }, {});
         });
 
-        fs.readFileSync(DDR_POWER_FILE_NAME, 'utf8', function (err, contents) {
+        fs.readFile(DDR_POWER_FILE_NAME, 'utf8', function (err, contents) {
                 currentPower = parseInt(contents);
                 lock.acquire(DDR_KEY, function (done) {
                         POWER_DDR += currentPower;
@@ -189,7 +189,7 @@ function readFileAndCalPower() {
         });
 
         if (args.bord == 'xavier') {
-                var contents = fs.readFileSync(SoC_POWER_FILE_NAME, 'utf8', function (err, contents) {
+                var contents = fs.readFile(SoC_POWER_FILE_NAME, 'utf8', function (err, contents) {
                         currentPower = parseInt(contents);
                         lock.acquire(SOC_KEY, function (done) {
                                 POWER_SOC += currentPower;
