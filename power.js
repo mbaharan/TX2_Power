@@ -16,6 +16,10 @@ Authors: Reza Baharani - Transformative Computer Systems Architecture Research (
 
 var net = require('net');
 var fs = require('fs');
+
+var AsyncLock = require('async-lock');
+var lock = new AsyncLock();
+
 var ArgumentParser = require('argparse').ArgumentParser;
 var capturing = false;
 
@@ -71,7 +75,7 @@ if (args.bord == 'tx2') {
         DDR_POWER_FILE_NAME = "/sys/bus/i2c/drivers/ina3221x/1-0041/iio_device/in_power1_input";
         SoC_POWER_FILE_NAME = "/sys/bus/i2c/drivers/ina3221x/1-0040/iio_device/in_power2_input";
 } else {
-        process.exit(1); 
+        process.exit(1);
 }
 
 var POWER_DDR = 0;
@@ -88,7 +92,11 @@ var COUNTER_GPU_BEFOR_START = 0;
 var COUNTER_GPU = 0;
 var COUNTER_DDR = 0;
 var COUNTER_SOC = 0;
- 
+
+const GPU_KEY = 'GPU_POWER';
+const SoC_KEY = 'SoC_POWER';
+const DDR_KEY = 'DDR_POWER';
+
 
 var server = net.createServer(function (socket) {
 
@@ -141,60 +149,82 @@ server.listen(args.port, '127.0.0.1');
 
 timer_soc_before_start = setInterval(readSoC_GPU_PowerBeforStart, args.intervalTime);
 
-function readSoC_GPU_PowerBeforStart(){
-        fs.readFile(SoC_POWER_FILE_NAME, 'utf8', function (err, contents) {
-                currentPower = parseInt(contents);
-                POWER_SOC_BEFOR_START += currentPower;
-                COUNTER_SOC_BEFOR_START++;
-                //console.log('\t--> currentPower: ' + currentPower + 'COUNTER_GPU: ' + COUNTER_GPU)
-        });
+function readSoC_GPU_PowerBeforStart() {
+
+        if (args.bord == 'xavier') {
+                fs.readFile(SoC_POWER_FILE_NAME, 'utf8', function (err, contents) {
+                        currentPower = parseInt(contents);
+                        POWER_SOC_BEFOR_START += currentPower;
+                        COUNTER_SOC_BEFOR_START++;
+                });
+        }
 
         fs.readFile(GPU_POWER_FILE_NAME, 'utf8', function (err, contents) {
                 currentPower = parseInt(contents);
                 POWER_GPU_BEFOR_START += currentPower;
                 COUNTER_GPU_BEFOR_START++;
-                //console.log('\t--> currentPower: ' + currentPower + 'COUNTER_GPU: ' + COUNTER_GPU)
         });
 
 }
 
 function readFileAndCalPower() {
-
         fs.readFile(GPU_POWER_FILE_NAME, 'utf8', function (err, contents) {
                 currentPower = parseInt(contents);
-                POWER_GPU += currentPower;
-                COUNTER_GPU++;
-                //console.log('\t--> currentPower: ' + currentPower + 'COUNTER_GPU: ' + COUNTER_GPU)
+                lock.acquire(GPU_KEY, function (done) {
+                        POWER_GPU += currentPower;
+                        COUNTER_GPU++;
+                });
         });
 
-        fs.readFile(DDR_POWER_FILE_NAME, 'utf8', function (err, contents) {
+        fs.readFileSync(DDR_POWER_FILE_NAME, 'utf8', function (err, contents) {
                 currentPower = parseInt(contents);
-                POWER_DDR += currentPower;
-                COUNTER_DDR++;
+                lock.acquire(DDR_KEY, function (done) {
+                        POWER_DDR += currentPower;
+                        COUNTER_DDR++;
+                });
         });
 
-        fs.readFile(SoC_POWER_FILE_NAME, 'utf8', function (err, contents) {
-                currentPower = parseInt(contents);
-                POWER_SOC += currentPower;
-                COUNTER_SOC++;
-        });
+        if (args.bord == 'xavier') {
+                var contents = fs.readFileSync(SoC_POWER_FILE_NAME, 'utf8', function (err, contents) {
+                        currentPower = parseInt(contents);
+                        lock.acquire(SOC_KEY, function (done) {
+                                POWER_SOC += currentPower;
+                                COUNTER_SOC++;
+                        });
+                });
+        }
 }
 
 function reportPower() {
-        avgPowerGPU = (POWER_GPU / (COUNTER_GPU * 1000)) - POWER_GPU_BEFOR_START_FINAL;
-        avgPowerDDR = POWER_DDR / (COUNTER_DDR * 1000);
-        avgPowerSoC = (POWER_SOC / (COUNTER_SOC * 1000)) - POWER_SOC_BEFOR_START_FINAL;
-        if (avgPowerGPU >= 0){
+
+        lock.acquire(GPU_KEY, function (done) {
+
+                avgPowerGPU = (POWER_GPU / (COUNTER_GPU * 1000)) - POWER_GPU_BEFOR_START_FINAL;
+        });
+
+        lock.acquire(DDR_KEY, function (done) {
+
+                avgPowerDDR = POWER_DDR / (COUNTER_DDR * 1000);
+        });
+
+        if (args.bord == 'xavier') {
+                lock.acquire(SOC_KEY, function (done) {
+                        avgPowerSoC = (POWER_SOC / (COUNTER_SOC * 1000)) - POWER_SOC_BEFOR_START_FINAL;
+                });
+        }
+
+        if (args.bord == 'xavier') {
                 totalPower = avgPowerGPU + avgPowerDDR + avgPowerSoC;
         } else {
-                console.log("WARNING: GPU power was nagative. Total power is the summation of DDR power and SoC power.")
-                console.log("If you are using DLA core and your using 16bit precision, you may ignore this warning.")
-                totalPower = avgPowerDDR + avgPowerSoC;
+                totalPower = avgPowerDDR + avgPowerGPU;
         }
-        
+
+
         console.log('---------------------------------');
         console.log('GPU Power: ' + avgPowerGPU + 'W');
         console.log('DDR Power: ' + avgPowerDDR + 'W');
-        console.log('SoC Power: ' + avgPowerSoC + 'W');
+        if (args.bord == 'xavier') {
+                console.log('SoC Power: ' + avgPowerSoC + 'W');
+        }
         console.log('Total power: ' + totalPower + 'W');
 }
