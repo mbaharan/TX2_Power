@@ -94,7 +94,7 @@ var COUNTER_DDR = 0;
 var COUNTER_SOC = 0;
 
 const GPU_KEY = 'GPU_POWER';
-const SoC_KEY = 'SoC_POWER';
+const SOC_KEY = 'SoC_POWER';
 const DDR_KEY = 'DDR_POWER';
 
 
