@@ -17,8 +17,9 @@ Authors: Reza Baharani - Transformative Computer Systems Architecture Research (
 var net = require('net');
 var fs = require('fs');
 
-var AsyncLock = require('async-lock');
-var lock = new AsyncLock();
+var GPU_LOCK = require('semaphore')(1);
+var DDR_LOCK = require('semaphore')(1);
+var SOC_LOCK = require('semaphore')(1);
 
 var ArgumentParser = require('argparse').ArgumentParser;
 var capturing = false;
@@ -93,11 +94,6 @@ var COUNTER_GPU = 0;
 var COUNTER_DDR = 0;
 var COUNTER_SOC = 0;
 
-const GPU_KEY = 'GPU_POWER';
-const SOC_KEY = 'SoC_POWER';
-const DDR_KEY = 'DDR_POWER';
-
-
 var server = net.createServer(function (socket) {
 
         socket.on('data', function (data) {
@@ -170,51 +166,48 @@ function readSoC_GPU_PowerBeforStart() {
 function readFileAndCalPower() {
         fs.readFile(GPU_POWER_FILE_NAME, 'utf8', function (err, contents) {
                 currentPower = parseInt(contents);
-                lock.acquire(GPU_KEY, function (done) {
+                GPU_LOCK.take(function () {
                         POWER_GPU += currentPower;
                         COUNTER_GPU++;
-                }, function (err, ret) {
-                        console.log("GPU release")
-                }, {});
+                        GPU_LOCK.leave()
+                });
         });
 
         fs.readFile(DDR_POWER_FILE_NAME, 'utf8', function (err, contents) {
                 currentPower = parseInt(contents);
-                lock.acquire(DDR_KEY, function (done) {
+                DDR_LOCK.take(function () {
                         POWER_DDR += currentPower;
                         COUNTER_DDR++;
-                }, function (err, ret) {
-                        console.log("DDR release")
-                }, {});
+                        DDR_LOCK.leave();
+                });
         });
 
         if (args.bord == 'xavier') {
                 fs.readFile(SoC_POWER_FILE_NAME, 'utf8', function (err, contents) {
                         currentPower = parseInt(contents);
-                        lock.acquire(SOC_KEY, function (done) {
+                        SOC_LOCK.take(function () {
                                 POWER_SOC += currentPower;
                                 COUNTER_SOC++;
+                                SOC_LOCK.leave();
                         });
-                }, function (err, ret) {
-                        console.log("SoC release")
-                }, {});
+
+                });
         }
 }
 
 function reportPower() {
 
-        lock.acquire(GPU_KEY, function (done) {
-
+        GPU_LOCK.take(function() {
                 avgPowerGPU = (POWER_GPU / (COUNTER_GPU * 1000)) - POWER_GPU_BEFOR_START_FINAL;
         });
 
-        lock.acquire(DDR_KEY, function (done) {
+        DDR_LOCK.take(function() {
 
                 avgPowerDDR = POWER_DDR / (COUNTER_DDR * 1000);
         });
 
         if (args.bord == 'xavier') {
-                lock.acquire(SOC_KEY, function (done) {
+                SOC_LOCK.take(function() {
                         avgPowerSoC = (POWER_SOC / (COUNTER_SOC * 1000)) - POWER_SOC_BEFOR_START_FINAL;
                 });
         }
